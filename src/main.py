@@ -31,6 +31,9 @@ for folder in os.listdir(root_dir):
 			all_tags.add(tag)
 			labels.append(tag)
 			cap = cv2.VideoCapture(root_dir+"/"+folder+"/"+filename)    
+			w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH));
+			h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT));
+
 			cap.set(cv2.CAP_PROP_FRAME_WIDTH, 128);
 			cap.set(cv2.CAP_PROP_FRAME_HEIGHT,128);
 			total_white_pixels_in_video_sequence = 0
@@ -43,10 +46,33 @@ for folder in os.listdir(root_dir):
 				j += framecount/required_count
 				cap.set(1,i)
 				success, frame = cap.read()
-				if(type(frame) != type(None) ):
-
+				if(type(frame) != type(None)):
 					frame = cv2.resize(frame, (128,128), 0, 0, cv2.INTER_CUBIC);
-					gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+										#redchannel = frame[:,:,2]
+					#frame = frame[:,:,1]
+					
+					print(w,h)
+
+					red_img = np.zeros((128,128,3),dtype="uint8")
+					green = np.zeros((128,128,3),dtype="uint8")
+					blue = np.zeros((128,128,3),dtype="uint8")
+					 
+					red_img[:,:,2] = frame[:,:,2]
+					green[:,:,1] = frame[:,:,1]
+					blue[:,:,0] = frame[:,:,0]
+				
+					frame = red_img
+					frame = np.concatenate((red_img,green,blue),axis=1)
+					print(frame.shape)
+					#red_img = np.zeros(frame.shape)
+					#red_img[:,:,2] = redchannel
+					#print(frame.shape)
+					#gray = frame[0].reshape(128,128)
+					
+					#gray = cv2.cvtColor(frame[0],cv2.COLOR_BGR2GRAY)
+					#gray = red_img;	
+					print(frame)
+					gray = frame
 					if(len(images)<required_count):
 						images.append(gray)	
 					count+=1
