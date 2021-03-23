@@ -33,12 +33,54 @@ class iterdata(torch.utils.data.IterableDataset):
         self.imglabels = []
         ic(len(self.images))
         ic(len(self.imglabels))
+
+    
     def shuffle(self,x,indices):
         r = []
         for i in range(len(indices)):
             r.append(x[indices[i]])
         return r
-     
+
+    def xl_preprocessing(self,bs):
+        self.images = []
+        frames_count = 0
+        self.imglabels = []
+        self.lab_dic = ['teacher', 'name', 'word', 'eraser', 'result', 'memorize', 'pen', 'scale', 'paper', 'principal', 'student', 'exam', 'blackboard', 'pass', 'picture', 'education', 'college', 'university', 'pencil', 'title', 'file', 'book', 'fail', 'sentence', 'classroom'] 
+        for i in range(len(self.videos)):
+            v = self.videos[i]
+            l = self.labels[i]
+            for f in v:
+                if np.count_nonzero(f) > 100:
+                    self.images.append(f)
+                    self.imglabels.append(self.lab_dic.index(l))
+                frames_count+=1
+        print()
+        ic(len(self.images),len(self.imglabels))
+        self.images = np.array(self.images)[:-(len(self.images)%bs),:,:]
+        self.imglabels = np.array(self.imglabels)[:-(len(self.imglabels)%bs)] 
+        
+        self.images = self.images.reshape((bs,-1,128,128))
+        self.imglabels = self.imglabels.reshape((bs,-1))
+        ic(self.images.shape)
+        ic(self.imglabels.shape)
+        
+        self.X = torch.tensor(self.images[:,:int(0.8*self.images.shape[1]) ] )
+        self.Y = torch.tensor(self.imglabels[:,:int(0.8*self.imglabels.shape[1] )])
+
+        self.VX = torch.tensor(self.images[:,int(0.8*(self.images.shape[1])):] )
+        self.VY = torch.tensor(self.imglabels[:,int(0.8*(self.imglabels.shape[1])):] )
+
+        if torch.cuda.is_available():
+            self.X = self.X.cuda()
+            self.Y = self.Y.cuda()
+            self.VX = self.VX.cuda()
+            self.VY = self.VY.cuda()
+
+        ic(self.X.shape)
+        ic(self.VX.shape)
+        ic(self.Y.shape)
+        ic(self.VY.shape)
+
     def _preproces(self):
         self.images = []
         frames_count = 0
@@ -162,16 +204,6 @@ class iterdata(torch.utils.data.IterableDataset):
         finout = np.array(out)
         # finout_video = np.array(y[0]) 
         finout_video = np.array(y)
-        # for i in tqdm.tqdm(range(1,out.shape[0])):                
-        #     row = out[i]
-        #     if (row[0] == row).sum() != n:
-        #         print(row[0]==row)
-        #         pass
-        #     else:
-        #         finout = np.concatenate((finout,[row]),axis=0)
-        #         finout_video = np.concatenate((finout_video,y[i]),axis=0)
-        #         pass
-
         for row in finout:
             if (row[0] == row).sum() != n:
                 # print(row)
@@ -230,7 +262,9 @@ class iterdata(torch.utils.data.IterableDataset):
  
 
         ic(self.X.shape,self.Y.shape,self.VX.shape,self.VY.shape)
- 
+    
+
+
 class Epoch_Stat:
     
     avg_acc = 0.0
@@ -315,27 +349,31 @@ def train_single_epoch(model,optim,loss_fn,it,mem_size):
     model.train()
     X,Y = it.X,it.Y
 
-    pbar = tqdm.tqdm(range(i,X.shape[0]),position=0,leave=True)
+    pbar = tqdm.tqdm(range(0,X.shape[1]),position=0,leave=True)
     for b in pbar: 
-        x = X[b].clone().detach()
-        y = Y[b].clone().detach()
+        x = X[:,b].clone().detach()
+        y = Y[:,b].clone().detach()
 
         if b%mem_size == 0:
-            out = model(x,True)
+            model.pop_memory(mem_size)
+            out = model(x)
             # out = model(x)
         else:
             out = model(x)
             # out = model(x,True)
-
+        
         loss = loss_fn(out,y)
         loss.backward()
         optim.step()
         optim.zero_grad()
+
         acc = (torch.argmax(out,-1)==y).sum().float()/x.shape[0]
         pbar.set_description("A:"+str(acc.item())[:5]+" L:"+str(loss.item())[:5])
         sat.new_data(acc.item(),loss.item())
     
     return sat.get_results()
+
+
 
 def train_val(model,loss_fn,it,mem_size):
     #batchsize is preset
@@ -363,6 +401,17 @@ def train_val(model,loss_fn,it,mem_size):
             sat.new_data(acc.item(),loss.item())
     return sat.get_results()
 
+def trainXL(model,epochs,learning_rate,memory_size=5):
+    iterator = iterdata(0,1)
+    iterator.xl_preprocessing(5)
+    optim = torch.optim.SGD(model.parameters(),lr=learning_rate)
+    loss_fn = torch.nn.CrossEntropyLoss()
+     
+    train_stats = Train_Stat()
+    for e in range(epochs):
+        train_dict = train_single_epoch(model,optim,loss_fn,iterator,memory_size)
+    
+    
 def train(model,epochs,learning_rate,memory_size=5):
     iterator = iterdata(0,1)
     imd,ld= iterator.info()
@@ -382,9 +431,15 @@ def train(model,epochs,learning_rate,memory_size=5):
     return train_stats
 
 
+
+# if __name__ == '__main__':
+#     model = AttenModFullXL()
+#     memory_size=5
+#     mem_size=5
+#     train(model,40,0.01,memory_size=5)
+#     pass
+
 if __name__ == '__main__':
     model = AttenModFullXL()
-    memory_size=5
-    mem_size=5
-    train(model,40,0.01,memory_size=5)
-    pass
+    msize = 3 
+    trainXL(model,2,0.01,memory_size=msize)

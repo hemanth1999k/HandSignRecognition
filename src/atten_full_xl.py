@@ -83,6 +83,9 @@ class AttentionHead(nn.Module):
         return x,att_weight
     
     def pop_last(self,n):
+        if self.kmemory == None:
+            return 
+            
         if self.kmemory.shape[1] == n*32:
             self.kmemory = self.kmemory[:,:-32,:]
             self.vmemory = self.vmemory[:,:-32,:]
