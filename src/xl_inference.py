@@ -12,8 +12,6 @@ import time
 from torchsummary import summary
 import matplotlib.pyplot as plt
 
-
-
 class SaveOutput:
     def __init__(self):
         self.outputs = []

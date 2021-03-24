@@ -213,7 +213,6 @@ class AttenModXL(torch.nn.Module):
         return u
 
 
-
 if __name__ == '__main__':
     X = torch.randint(0,255,(100,128,128))
     model = AttenModXL()

@@ -355,8 +355,37 @@ def train_single_epoch(model,optim,loss_fn,it,mem_size):
         y = Y[:,b].clone().detach()
 
         if b%mem_size == 0:
-            model.pop_memory(mem_size)
+            out = model(x,True)
+            # out = model(x)
+        else:
             out = model(x)
+            # out = model(x,True)
+        
+        loss = loss_fn(out,y)
+        loss.backward()
+        optim.step()
+        optim.zero_grad()
+
+        acc = (torch.argmax(out,-1)==y).sum().float()/x.shape[0]
+        pbar.set_description("A:"+str(acc.item())[:5]+" L:"+str(loss.item())[:5])
+        sat.new_data(acc.item(),loss.item())
+    
+    return sat.get_results()
+
+def train_single_epoch_cont(model,optim,loss_fn,it,mem_size):
+    #batchsize is preset
+    sat = Epoch_Stat()
+    model.train()
+    X,Y = it.X,it.Y
+
+    pbar = tqdm.tqdm(range(0,X.shape[1]),position=0,leave=True)
+    for b in pbar: 
+        x = X[:,b].clone().detach()
+        y = Y[:,b].clone().detach()
+
+        model.pop_memory(mem_size)
+        if b == 0:
+            out = model(x,True)
             # out = model(x)
         else:
             out = model(x)
@@ -374,6 +403,31 @@ def train_single_epoch(model,optim,loss_fn,it,mem_size):
     return sat.get_results()
 
 
+def train_val_cont(model,loss_fn,it,mem_size):
+    #batchsize is preset
+    sat = Epoch_Stat()
+    model.eval()
+    X,Y = it.VX,it.VY
+    # pbar = tqdm.tqdm(range(X.shape[0]))
+    with torch.no_grad():
+        for b in tqdm.tqdm(range(X.shape[1]),leave=True,position=0):
+            x = X[:,b].detach().clone()
+            y = Y[:,b].detach().clone()
+            # print(y)
+            model.pop_memory(mem_size)
+            if b== 0:
+                out = model(x,True)
+                # out = model(x)
+            else:
+                # out = model(x,True)
+                out = model(x)
+
+            loss = loss_fn(out,y)
+            acc = (torch.argmax(out,-1)==y).sum().float()/x.shape[0]
+            # pbar.set_description("A:"+str(acc.item())[:5]+" L:"+str(loss.item())[:5])
+            sat.new_data(acc.item(),loss.item())
+    return sat.get_results()
+
 
 def train_val(model,loss_fn,it,mem_size):
     #batchsize is preset
@@ -385,9 +439,8 @@ def train_val(model,loss_fn,it,mem_size):
         for b in tqdm.tqdm(range(X.shape[0]),leave=True,position=0):
             x = X[b].detach().clone()
             y = Y[b].detach().clone()
-            out = model(x)
             # print(y)
-
+            
             if b%mem_size == 0:
                 out = model(x,True)
                 # out = model(x)
@@ -401,7 +454,7 @@ def train_val(model,loss_fn,it,mem_size):
             sat.new_data(acc.item(),loss.item())
     return sat.get_results()
 
-def trainXL(model,epochs,learning_rate,memory_size=5):
+def trainContXL(model,epochs,learning_rate,memory_size=5):
     iterator = iterdata(0,1)
     iterator.xl_preprocessing(5)
     optim = torch.optim.SGD(model.parameters(),lr=learning_rate)
@@ -431,6 +484,32 @@ def train(model,epochs,learning_rate,memory_size=5):
     return train_stats
 
 
+def plot_train_stats(train_history):
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1,2)
+    # axes[0,0].plot(range(len(train_history.h_acc)),train_history.h_acc)
+
+    h_acc = train_history.h_acc
+    vh_acc = train_history.vh_acc[slice(0,len(train_history.vh_acc),3)]
+
+    h_loss = train_history.h_loss
+    vh_loss = train_history.vh_loss[slice(0,len(train_history.vh_acc),3)]
+
+    # print(train_history.h_acc)
+    # print(train_history.vh_acc)
+    axes[0].plot(range(0,len(h_acc)),h_acc)
+    axes[0].plot(range(0,len(vh_acc)*3,3),vh_acc)
+    axes[0].set_title("Accuracy")
+    axes[0].legend(["train","val"])
+
+    axes[1].plot(range(0,len(h_loss)),h_loss)
+    axes[1].plot(range(0,len(vh_loss)*3,3),vh_loss)
+    axes[1].set_title("Loss")
+    axes[1].legend(["train","val"])
+
+    plt.show()
+    # axes[0,1].plot(train_history.h_loss,train_)
 
 # if __name__ == '__main__':
 #     model = AttenModFullXL()
@@ -442,4 +521,5 @@ def train(model,epochs,learning_rate,memory_size=5):
 if __name__ == '__main__':
     model = AttenModFullXL()
     msize = 3 
-    trainXL(model,2,0.01,memory_size=msize)
+    trained_history = trainContXL(model,2,0.01,memory_size=msize)
+    plot_train_stats(trained_history)
