@@ -8,6 +8,7 @@ import matplotlib
 import random
 from itertools import count
 from attensat_xl import *
+from atten_full_xl import *
 import time
 from interface import *
 from torchsummary import summary
@@ -33,13 +34,27 @@ class Model:
         self.handles = []
         self.index = 0
         self.nback = nback
-        # for layer in self.model.modules():
-        #     if isinstance(layer,torch.nn.modules.conv.Conv2d):
-        #         hooks = layer.register_forward_hook(self.save_output)
-        #         self.handles.append(hooks)
-                
         pass
     
+    def change_model(self,mark,nback):
+        if mark == 0:
+            self.model = AttenModXL()
+            model_name = "../models/divaten-X"+str(nback) + "L-SD.pth"
+            ic("Loaded model ",model_name)
+            self.model.load_state_dict(torch.load(model_name,map_location = torch.device('cpu')))
+            
+        if mark == 1:
+            self.model = AttenModFullXL()
+            model_name= "../models/FullX"+str(nback)+ "L.pth"
+            ic("Loaded model ",model_name)
+            self.model.load_state_dict(torch.load(model_name,map_loaction=torch.device("cpu")))
+
+        if mark == 2:
+            self.model = AttenModFullXL()
+            model_name= "../models/ContX"+str(nback)+ "L.pth"
+            ic("Loaded model ",model_name)
+            self.model.load_state_dict(torch.load(model_name,map_loaction=torch.device("cpu")))
+            
     def recognize(self,frame,capture_output=True):
         frame = frame[np.newaxis,:,:]
         # print("Recognize Called")
@@ -149,14 +164,17 @@ class Recognize:
                 self.last_f = np.array(frame,dtype="uint8")
                 pass
       
-
 if __name__ == '__main__':
     model = Model(10)
     recog = Recognize(model)
     iF = Display()
     while True:
         recog.capture()
-        iF.update(recog.diffed,recog.confidence)
+        commands = iF.update(recog.diffed,recog.confidence)
+        if commands != None:
+            model.change_model(*commands)
+            recog.model = model
+
         # cv2.imshow("frame",recog.diffed)
         # if cv2.waitKey(1) & 0xFF == ord('q'):
         #     break 

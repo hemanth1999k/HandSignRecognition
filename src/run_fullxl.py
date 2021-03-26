@@ -489,7 +489,6 @@ def plot_train_stats(train_history):
 
     fig, axes = plt.subplots(1,2)
     # axes[0,0].plot(range(len(train_history.h_acc)),train_history.h_acc)
-
     h_acc = train_history.h_acc
     vh_acc = train_history.vh_acc[slice(0,len(train_history.vh_acc),3)]
 
