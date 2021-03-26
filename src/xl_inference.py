@@ -9,6 +9,7 @@ import random
 from itertools import count
 from attensat_xl import *
 import time
+from interface import *
 from torchsummary import summary
 import matplotlib.pyplot as plt
 
@@ -26,7 +27,7 @@ class SaveOutput:
 class Model:
     def __init__(self,nback=5):
         self.model = AttenModXL()
-        self.model.load_state_dict(torch.load("../models/divaten-X10L-SD.pth",map_location = torch.device('cpu')))
+        self.model.load_state_dict(torch.load("../models/divaten-X"+str(nback) + "L-SD.pth",map_location = torch.device('cpu')))
         self.model.eval()
         self.save_output = SaveOutput()
         self.handles = []
@@ -41,7 +42,7 @@ class Model:
     
     def recognize(self,frame,capture_output=True):
         frame = frame[np.newaxis,:,:]
-        print("Recognize Called")
+        # print("Recognize Called")
         frame = torch.tensor(frame,dtype=torch.float32)
         out = self.model(frame)    
         self.model.pop_memory(self.nback) 
@@ -75,6 +76,7 @@ class Recognize:
         self.lab_dic = ['teacher', 'name', 'word', 'eraser', 'result', 'memorize', 'pen', 'scale', 'paper', 'principal', 'student', 'exam', 'blackboard', 'pass', 'picture', 'education', 'college', 'university', 'pencil', 'title', 'file', 'book', 'fail', 'sentence', 'classroom'] 
         self.last_f = None
         self.diffed = None
+        self.confidence = None
         
     def capture_video(self,videopath):
         self.cap = cv2.VideoCapture(videopath)
@@ -99,9 +101,9 @@ class Recognize:
                     if count  > 10:
                         # cv2.imshow('frame',self.diffed)	
                         stime = time.time()
-                        cv2.imshow("frame",np.array(recog.diffed,dtype=np.uint8))
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
-                            break             
+                        # cv2.imshow("frame",np.array(recog.diffed,dtype=np.uint8))
+                        # if cv2.waitKey(1) & 0xFF == ord('q'):
+                        #     break             
                         classify = torch.nn.functional.softmax(self.model.recognize(self.diffed),dim=-1)
                         etime = time.time()-stime
                         classify = classify.detach().numpy()
@@ -130,9 +132,10 @@ class Recognize:
                 self.diffed[self.diffed<30] =0 
                 count = np.count_nonzero(self.diffed)
                 if count  > 10:
-                    cv2.imshow('frame',self.diffed)	
+                    # cv2.imshow('frame',self.diffed)	
                     stime = time.time()
                     classify = torch.nn.functional.softmax(self.model.recognize(self.diffed),dim=-1)
+                    self.confidence = (classify.detach().numpy(),self.lab_dic)
                     etime = time.time()-stime
                     classify = classify.detach().numpy()
                     classify = classify[0].tolist() 
@@ -150,9 +153,10 @@ class Recognize:
 if __name__ == '__main__':
     model = Model(10)
     recog = Recognize(model)
+    iF = Display()
     while True:
         recog.capture()
-
-        cv2.imshow("frame",recog.diffed)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break 
+        iF.update(recog.diffed,recog.confidence)
+        # cv2.imshow("frame",recog.diffed)
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break 

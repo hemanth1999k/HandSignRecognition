@@ -139,7 +139,9 @@ class Recognize:
                         sys.stdout.flush()
                     self.last_f = np.array(frame,dtype="uint8")
                     pass
-      
+    def start_capture(self):
+        self.cap = cv2.VideoCapture(0)
+        
     def capture(self):
         x,frame = self.cap.read()
         if x:
@@ -220,25 +222,7 @@ def shot_video(model):
                     sys.stdout.write(lab_dic[np.argmax(classify)])
                     sys.stdout.flush()
 
-
                     
-                    # fig = plt.figure()
-                    # ax = fig.add_axes([0,0,1,1])
-                    # ax.bar(lab_dic,classify)
-                    # ax.set_ylim(0,1)
-                    # plt.show()gg
-                    # plt.legend(lab_dic,loc="upper left")
-                    # plt.show()
-                    # plt.pause(0.0001)
-                   # plt.title('Dynamic line graphs')
-                    # ind = np.argmax(classify);v = classify[ind];classify[ind] = 0
-                    # ind1 = np.argmax(classify);v1 = classify[ind1];classify[ind1] = 0
-                    # ind2 = np.argmax(classify);v2 = classify[ind2];classify[ind2] = 0
-                    # print("-------------------------------------")
-                    # print(lab_dic[ind], " : ",v)
-                    # print(lab_dic[ind1]," : ",v1)
-                    # print(lab_dic[ind2]," : ",v2)
-
                 last_f = np.array(frame,dtype="uint8")
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break                                               
@@ -258,28 +242,19 @@ def plot_attention(name,attention):
     print("Plotted")
         
 import threading
+
 if __name__ == '__main__':
     model = Model() 
-    # t1 = threading.Thread(target=plotting)    
     recog = Recognize(model)
-    # threads = []
-    recog.capture_video("../dataset/2 book/v_book_c1.mp4")
-
+    # recog.capture_video("../dataset/2 book/v_book_c1.mp4")
+    recog.start_capture()
     # c = 0
 
-    # while 1:
-    #     recog.capture()
-
-    #     # plot_attention("A",recog.model.model.att_mat)
-    #     cv2.imshow("frame",recog.diffed)
-    #     if cv2.waitKey(1) & 0xFF == ord('q'):
-    #         break             
-    #     c+=1
+    while 1:
+        recog.capture()
+        # plot_attention("A",recog.model.model.att_mat)
+        cv2.imshow("frame",recog.diffed)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break             
 
 
-
-    # for t in threads:
-    #     t.join()
-    # t1.join()
-    # out= model.model(torch.ones((1,128,128)))
-    # summary(model.model,input_size=(128,129)) 
