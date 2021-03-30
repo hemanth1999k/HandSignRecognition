@@ -47,13 +47,13 @@ class Model:
             self.model = AttenModFullXL()
             model_name= "../models/FullX"+str(nback)+ "L.pth"
             ic("Loaded model ",model_name)
-            self.model.load_state_dict(torch.load(model_name,map_loaction=torch.device("cpu")))
+            self.model.load_state_dict(torch.load(model_name,map_location=torch.device("cpu")))
 
         if mark == 2:
             self.model = AttenModFullXL()
             model_name= "../models/ContX"+str(nback)+ "L.pth"
             ic("Loaded model ",model_name)
-            self.model.load_state_dict(torch.load(model_name,map_loaction=torch.device("cpu")))
+            self.model.load_state_dict(torch.load(model_name,map_location=torch.device("cpu")))
             
     def recognize(self,frame,capture_output=True):
         frame = frame[np.newaxis,:,:]

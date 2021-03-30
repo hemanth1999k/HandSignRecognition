@@ -12,7 +12,7 @@ class Display:
         self.model_type = 0
         self.availables = {
             0:[5,8,10],
-            1:[5,8,10],
+            1:[5,10,12],
             2:[5,8,10],
         }
          
