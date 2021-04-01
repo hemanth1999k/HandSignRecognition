@@ -92,6 +92,7 @@ class Recognize:
         self.last_f = None
         self.diffed = None
         self.confidence = None
+        self.last_frame_time = None
         
     def capture_video(self,videopath):
         self.cap = cv2.VideoCapture(videopath)
@@ -132,8 +133,16 @@ class Recognize:
                     self.last_f = np.array(frame,dtype="uint8")
                     pass
       
-    def capture(self):
-        x,frame = self.cap.read()
+    def capture(self,fps):
+        if self.last_frame_time is None:
+            self.last_frame_time = time.time()
+            x,frame = self.cap.read()
+        else:
+            while time.time() - self.last_frame_time < 1/fps:
+                print(time.time()-self.last_frame_time," > ", 1/fps)
+            self.last_frame_time = time.time()
+            x,frame = self.cap.read()
+            
         if x:
             s = 128
             frame = cv2.resize(frame,(s,s),0,0,cv2.INTER_CUBIC)
@@ -168,13 +177,10 @@ if __name__ == '__main__':
     model = Model(10)
     recog = Recognize(model)
     iF = Display()
+    FPS = 3 # Higher frame rate will not work properly correct frame rate will work better
     while True:
-        recog.capture()
+        recog.capture(FPS)
         commands = iF.update(recog.diffed,recog.confidence)
         if commands != None:
             model.change_model(*commands)
             recog.model = model
-
-        # cv2.imshow("frame",recog.diffed)
-        # if cv2.waitKey(1) & 0xFF == ord('q'):
-        #     break 
